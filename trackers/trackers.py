@@ -47,7 +47,6 @@ class Tracker:
 
             #convert to supervision format
             detections_supervision=sv.Detections.from_ultralytics(detection)
-            print(detections_supervision)
             
             
             #convert goalkeeper to player
@@ -98,7 +97,8 @@ class Tracker:
             
             #Draw players
             for track_id,player in player_dictionary.items():
-                frame=self.draw_ellipse(frame,player["bbox"],colour=(0, 255, 0) ,track_id=track_id)
+                colour=player.get('team_colour', (0, 255, 0))  
+                frame=self.draw_ellipse(frame,player["bbox"],colour=colour ,track_id=track_id)
 
             #Draw referees
             for track_id,referee in referee_dictionary.items():
