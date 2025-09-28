@@ -4,6 +4,7 @@ import pickle
 import os
 import cv2
 import numpy as np
+import pandas as pd
 
 
 import sys
@@ -15,7 +16,19 @@ class Tracker:
         self.model=YOLO(model_path)
         self.tracker=sv.ByteTrack()
         
-
+    def interpollate_ball_postions(self,ball_positions):
+        ball_positions = [x.get(1,{}).get('bbox',[]) for x in ball_positions]
+        df_ball_positions = pd.DataFrame(ball_positions, columns=['x1', 'y1', 'x2', 'y2'])
+        
+        #Interpolate missing values
+        df_ball_positions=df_ball_positions.interpolate()
+        df_ball_positions = df_ball_positions.bfill()
+        
+        #return in original format
+        ball_positions=[{1:{'bbox':x}}for x in df_ball_positions.to_numpy().tolist()]
+        
+        return ball_positions
+        
     def detect_frames(self,frames):
         batch_size=20
         detections=[]
@@ -86,7 +99,7 @@ class Tracker:
                 pass
         return tracks
 
-    def draw_annotations(self,video_frames,tracks):
+    def draw_annotations(self,video_frames,tracks,team_ball_control):
         output_frames = []
         for frame_num,frame in enumerate(video_frames):
             frame=frame.copy()
@@ -97,8 +110,11 @@ class Tracker:
             
             #Draw players
             for track_id,player in player_dictionary.items():
-                colour=player.get('team_colour', (0, 255, 0))  
+                colour=player.get('team_colour', (0, 0, 0))  
                 frame=self.draw_ellipse(frame,player["bbox"],colour=colour ,track_id=track_id)
+                
+                if player.get('has_ball', False):
+                    self.draw_triangle(frame,player["bbox"],colour=(0, 0, 255))
 
             #Draw referees
             for track_id,referee in referee_dictionary.items():
@@ -110,7 +126,7 @@ class Tracker:
                 
                 frame=self.draw_triangle(frame,ball["bbox"],colour=(255, 255, 0))
                 
-                
+            frame=self.draw_teams_control(frame,frame_num,team_ball_control)
             output_frames.append(frame)
         return output_frames
     
@@ -184,3 +200,40 @@ class Tracker:
         
         return frame
         
+    def draw_teams_control(self,frame,frame_num,team_ball_control):
+        # Draw semi-transparent rectangle at top-left corner
+        overlay=frame.copy()
+        cv2.rectangle(overlay,(0,0),(200,50),(50,50,50),-1)
+        alpha=0.6
+        cv2.addWeighted(overlay,alpha,frame,1-alpha,0,frame)
+        
+        team_ball_control_till_frame=team_ball_control[:frame_num+1]
+        
+        #get the number of times each team had ball control
+        team1_num_frames=team_ball_control_till_frame[team_ball_control_till_frame==1].shape[0]
+        team2_num_frames=team_ball_control_till_frame[team_ball_control_till_frame==2].shape[0]
+        
+        team1=team1_num_frames/(team1_num_frames+team2_num_frames)
+        team2=team2_num_frames/(team1_num_frames+team2_num_frames)
+        
+        cv2.putText(
+            frame,
+            f'Team 1: {team1*100:.1f}%',
+            (10,20),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255,255,255),
+            thickness=2
+        )
+        
+        cv2.putText(
+            frame,
+            f'Team 2: {team2*100:.1f}%',
+            (10,45),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255,255,255),
+            thickness=2
+        )
+
+        return frame

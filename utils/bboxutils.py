@@ -26,3 +26,18 @@ def get_bbox_width(bbox):
     """
     x1, _, x2, _ = bbox
     return int(x2 - x1)
+
+
+def calculate_distance(point1, point2):
+    """
+    Calculate the Euclidean distance between two points.
+    
+    Args:
+        point1 (tuple): Coordinates of the first point (x1, y1).
+        point2 (tuple): Coordinates of the second point (x2, y2).
+        
+    Returns:
+        float: Euclidean distance between the two points.
+    """
+    import math
+    return math.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)

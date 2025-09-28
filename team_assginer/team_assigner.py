@@ -1,4 +1,6 @@
 from sklearn.cluster import KMeans
+import numpy as np
+import cv2
 
 class Team_Assigner:
     def __init__(self):
@@ -11,15 +13,19 @@ class Team_Assigner:
         image_2d=image.reshape(-1,3)
 
         #k-means with 2 clusters
-        k_means=KMeans(n_clusters=2,init='k-means++',n_init=10,random_state=0).fit(image_2d)
+        k_means=KMeans(n_clusters=2,init='k-means++',n_init=10).fit(image_2d)
         return k_means
 
         
     
     def get_player_colour(self,frame, bbox):
-        image=frame[int(bbox[1]):int(bbox[3]), int(bbox[0]):int(bbox[2])]
-        
-        top_half_of_image=image[0:int(image.shape[0]/2),:]
+        image=frame[int(bbox[1]):int(bbox[3]), int(bbox[0]):int(bbox[2])] #crop player from frame / image=frame[y1:y2, x1:x2]
+        image = cv2.GaussianBlur(image, (7, 7), 0)
+        image=cv2.cvtColor(image,cv2.COLOR_BGR2Lab)
+        h=image.shape[0] #(height, width, channels) --->height
+        start=int(h*0.3)
+        end=int(h*0.8)
+        top_half_of_image=image[start:end,:]
         
         k_means=self.get_clustering_model(top_half_of_image)
         
@@ -47,7 +53,7 @@ class Team_Assigner:
             player_colour=self.get_player_colour(frame, bbox)
             player_colours.append(player_colour)
         
-        kmeans=KMeans(n_clusters=2, init='k-means++', n_init=10).fit(player_colours)
+        kmeans=KMeans(n_clusters=2, init='k-means++', n_init=10,random_state=2).fit(player_colours)
         self.kmeans=kmeans
         self.team_colours[1] = kmeans.cluster_centers_[0]
         self.team_colours[2] = kmeans.cluster_centers_[1]
@@ -61,8 +67,7 @@ class Team_Assigner:
         
         team_id=self.kmeans.predict(player_colour.reshape(1,-1))[0]
         team_id+=1 # to make it 1 or 2 instead of 0 or 1
-        if team_id==91:
-            team_id=1
+        
         self.player_team[player_id]=team_id
         
         
