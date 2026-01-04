@@ -4,6 +4,9 @@ from team_assginer import Team_Assigner
 from player_ball_assginger import PlayerBallAssigner
 import cv2
 import numpy as np
+
+from camera_movement import CameraMovementEstimator
+
 def main():
     #read video
     video_frames= read_video('input_videos/background-10.mp4')
@@ -13,6 +16,14 @@ def main():
     
     #interpolate ball positions
     tracks['ball']=tracker.interpollate_ball_postions(tracks['ball'])
+    
+    #add position to track
+    tracker.add_position_to_track(tracks)
+    
+    #camera movement estimation
+    camera_movement_estimator=CameraMovementEstimator(video_frames[0])
+    camera_movement_per_frame=camera_movement_estimator.get_camera_movement(video_frames, read_stub=True, stub_path='stub/camera_movement_stub_bck.pkl')
+    camera_movement_estimator.adjust_position(tracks, camera_movement_per_frame)
     
     
     # for trackid,player in tracks["player"][0].items():
@@ -63,6 +74,8 @@ def main():
     #draw output video
     output_frames=tracker.draw_annotations(video_frames,tracks,team_ball_control)
     
+    ##draw camera movement
+    output_frames=camera_movement_estimator.draw_camera_movement(output_frames, camera_movement_per_frame)
     
     # save video
     save_video(output_frames, 'output_videos/yolo11x.avi')
@@ -70,3 +83,11 @@ def main():
     
 if __name__=='__main__':
     main()
+    
+
+    
+    
+    
+    
+
+

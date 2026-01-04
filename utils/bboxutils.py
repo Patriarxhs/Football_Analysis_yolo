@@ -41,3 +41,8 @@ def calculate_distance(point1, point2):
     """
     import math
     return math.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
+
+
+def get_foot_position(bbox):
+    x1, y1, x2, y2 = bbox
+    return int((x1 + x2)/2) , int(y2)  # x center, y bottom 

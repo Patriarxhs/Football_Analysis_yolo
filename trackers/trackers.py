@@ -9,13 +9,26 @@ import pandas as pd
 
 import sys
 sys.path.append("../")
-from utils import get_bbox_center, get_bbox_width
+from utils import get_bbox_center, get_bbox_width ,get_foot_position
 
 class Tracker:
     def __init__(self,model_path):
         self.model=YOLO(model_path)
         self.tracker=sv.ByteTrack()
-        
+    
+    
+    def add_position_to_track(self,tracks):
+        for object,object_track in tracks.items():
+            for frame_num,track in enumerate(object_track):
+                for track_id,track_data in track.items():
+                    bbox=track_data['bbox']
+                    
+                    if object=='ball':
+                        position=get_bbox_center(bbox)
+                    else:
+                        position=get_foot_position(bbox)
+                    tracks[object][frame_num][track_id]['position']=position
+
     def interpollate_ball_postions(self,ball_positions):
         ball_positions = [x.get(1,{}).get('bbox',[]) for x in ball_positions]
         df_ball_positions = pd.DataFrame(ball_positions, columns=['x1', 'y1', 'x2', 'y2'])
